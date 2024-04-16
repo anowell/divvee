@@ -11,7 +11,11 @@ Basic plan:
 
 
 ## Getting Started:
+Install `libsodium-dev`, pijul, rust, and just
 
-- Build with `cargo build`
 - Create a team: `mkdir -p repo/TEAM/tasks`
+- Initialize the team's repo: `cd repo && pijul init`
+- Configure pijul identity with the 'default' username: `pijul identity new`
+- Create a database file: `just db-setup`
+- Build with `cargo build`
 - Run with `just cli --help` (or `target/debug/dv`)
