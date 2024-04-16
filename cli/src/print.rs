@@ -88,7 +88,7 @@ impl OrNa for Option<String> {
 
 fn print_task_detail(task: &Task, print_description: bool) {
     println!(
-        "{}, {}",
+        "{}: {}",
         task.id().unwrap().bold(),
         task.title.bold().green()
     );
