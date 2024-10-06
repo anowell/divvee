@@ -10,7 +10,7 @@ canonical-path = "2.0.2"
 chrono = "0.4.31"
 clap = { version = "4.4.18", features = ["env"] }
 gray_matter = "0.2.6"
-itertools = "0.12.0"
+itertools = "0.13.0"
 kdl = "4.6.0"
 libpijul = "1.0.0-beta.9"
 log = "0.4.20"
@@ -22,7 +22,7 @@ serde_yaml = "0.9.30"
 tempfile = "3.9.0"
 thiserror = "1.0.56"
 toml = "0.8.8"
-sqlx = { version = "0.7", features = [ "runtime-tokio", "json", "sqlite", "macros" ] }
+sqlx = { version = "0.8", features = [ "runtime-tokio", "json", "sqlite", "macros" ] }
 owning_ref = "0.4.1"
 
 [dev-dependencies]

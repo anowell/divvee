@@ -171,15 +171,15 @@ struct BulkEditCmd {
 
 #[derive(Copy, Clone, Debug, PartialEq, Eq, ValueEnum, Display)]
 enum Status {
-    #[display(fmt = "Todo")]
+    #[display("Todo")]
     Todo,
-    #[display(fmt = "In Progress")]
+    #[display("In Progress")]
     InProgress,
-    #[display(fmt = "Done")]
+    #[display("Done")]
     Done,
-    #[display(fmt = "Canceled")]
+    #[display("Canceled")]
     Canceled,
-    #[display(fmt = "Duplicate")]
+    #[display("Duplicate")]
     Duplicate,
 }
 
@@ -218,13 +218,13 @@ impl Status {
 
 #[derive(Copy, Clone, Debug, PartialEq, Eq, ValueEnum, Display)]
 enum View {
-    #[display(fmt = "id")]
+    #[display("id")]
     Id,
-    #[display(fmt = "line")]
+    #[display("line")]
     Line,
-    #[display(fmt = "detail")]
+    #[display("detail")]
     Detail,
-    #[display(fmt = "json")]
+    #[display("json")]
     Json,
 }
 
@@ -249,7 +249,7 @@ async fn main() -> Result<()> {
         None => match env::var("DIVVEE_REPO") {
             Ok(p) => PathBuf::from(p),
             Err(_) => env::current_dir()?,
-        }
+        },
     };
     let mut dv = System::init(repo_path).await?;
     match cli.cmd {
