@@ -32,7 +32,16 @@ fn runes_output(home: &Path, args: &[&str]) -> Output {
 }
 
 fn runes_ok(home: &Path, args: &[&str]) -> String {
-    let output = runes_output(home, args);
+    expect_stdout(args, runes_output(home, args))
+}
+
+/// Run runes as a detected agent, so a bare `new` leaves a draft.
+fn runes_agent_ok(home: &Path, args: &[&str]) -> String {
+    let output = runes_output_with_env(home, &[("CLAUDECODE", "1")], args);
+    expect_stdout(args, output)
+}
+
+fn expect_stdout(args: &[&str], output: Output) -> String {
     if !output.status.success() {
         panic!(
             "command failed: runes {}\nstdout:\n{}\nstderr:\n{}",
@@ -1461,8 +1470,8 @@ fn jj_show_section_edit_annotation() {
     );
 }
 
-/// Test: the canonical lifecycle — `new` leaves an editable draft on disk,
-/// direct edits land, and `commit <id>` is what puts it into history.
+/// Test: the canonical agent lifecycle — `new` leaves an editable draft on
+/// disk, direct edits land, and `commit <id>` is what puts it into history.
 #[test]
 fn jj_new_leaves_draft_until_commit() {
     if !command_exists("jj") {
@@ -1470,7 +1479,7 @@ fn jj_new_leaves_draft_until_commit() {
         return;
     }
     let (home, store_path) = setup_jj_store("jj-new-draft");
-    let created = runes_ok(&home, &["new", "--project", "test:proj", "Draft me"]);
+    let created = runes_agent_ok(&home, &["new", "--project", "test:proj", "Draft me"]);
     let id = rune_id(&created).to_string();
     let printed_path = find_rune_file(Path::new(&store_path), &id);
 
@@ -1563,6 +1572,57 @@ fn jj_new_commits_when_content_is_supplied() {
     assert!(log.contains(&forced_id), "--commit did not commit: {log}");
 }
 
+/// Test: a bare `new` splits by audience — a human's rune is recorded, an
+/// agent's is left as a draft to fill in — and --no-commit opts out either way.
+#[test]
+fn jj_new_commits_for_a_human_and_drafts_for_an_agent() {
+    if !command_exists("jj") {
+        eprintln!("skipping: jj not installed");
+        return;
+    }
+    let (home, _) = setup_jj_store("jj-new-audience");
+
+    let human = runes_ok(&home, &["new", "--project", "test:proj", "Human made"]);
+    assert!(
+        !human.contains("(uncommitted)"),
+        "a human's bare `new` should commit: {human}"
+    );
+    let human_id = rune_id(&human).to_string();
+    let log = runes_ok(&home, &["log", &format!("test:{human_id}"), "--no-pager"]);
+    assert!(log.contains(&human_id), "bare `new` left no history: {log}");
+
+    let agent = runes_agent_ok(&home, &["new", "--project", "test:proj", "Agent made"]);
+    assert!(
+        agent.contains("(uncommitted)"),
+        "an agent's bare `new` should draft: {agent}"
+    );
+
+    let described = runes_agent_ok(
+        &home,
+        &[
+            "new",
+            "--project",
+            "test:proj",
+            "Agent wrote it",
+            "-m",
+            "Add",
+        ],
+    );
+    assert!(
+        !described.contains("(uncommitted)"),
+        "content up front should commit for an agent too: {described}"
+    );
+
+    let held = runes_ok(
+        &home,
+        &["new", "--project", "test:proj", "Held back", "--no-commit"],
+    );
+    assert!(
+        held.contains("(uncommitted)"),
+        "--no-commit should still draft for a human: {held}"
+    );
+}
+
 /// Test: `new --status <legacy alias>` normalizes before the draft is written,
 /// so a rune that never reached history still carries the core state on disk,
 /// in the listing, and once it is finally recorded.
@@ -1574,7 +1634,7 @@ fn jj_new_draft_normalizes_a_legacy_status() {
     }
     let (home, store_path) = setup_jj_store("jj-new-draft-legacy");
     let store = Path::new(&store_path);
-    let created = runes_ok(
+    let created = runes_agent_ok(
         &home,
         &[
             "new",
@@ -1649,7 +1709,7 @@ fn jj_delete_discards_draft_without_force() {
         return;
     }
     let (home, store_path) = setup_jj_store("jj-delete-draft");
-    let draft = rune_id(&runes_ok(
+    let draft = rune_id(&runes_agent_ok(
         &home,
         &["new", "--project", "test:proj", "Discard me"],
     ))
@@ -1695,7 +1755,7 @@ fn jj_delete_commits_only_the_deleted_rune() {
     }
     let (home, store_path) = setup_jj_store("jj-delete-scope");
     let store = Path::new(&store_path);
-    let draft = rune_id(&runes_ok(
+    let draft = rune_id(&runes_agent_ok(
         &home,
         &["new", "--project", "test:proj", "Keep me pending"],
     ))
@@ -1814,7 +1874,7 @@ fn jj_new_json_reports_id_path_and_commit_state() {
         return;
     }
     let (home, store_path) = setup_jj_store("jj-new-json");
-    let drafted = runes_ok(
+    let drafted = runes_agent_ok(
         &home,
         &[
             "new",

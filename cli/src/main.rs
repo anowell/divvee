@@ -212,10 +212,10 @@ struct NewArgs {
     /// Open editor after creation
     #[arg(short = 'e', long = "edit")]
     edit: bool,
-    /// Commit immediately instead of leaving the doc for in-place editing
+    /// Commit immediately, even where a bare `new` would leave a draft
     #[arg(long = "commit", conflicts_with = "no_commit")]
     commit: bool,
-    /// Leave the new doc uncommitted even when -e/-f/-m provided content
+    /// Leave the new doc uncommitted for in-place editing, then `runes commit <id>`
     #[arg(long = "no-commit")]
     no_commit: bool,
     /// Commit message (implies commit)
@@ -1706,6 +1706,16 @@ fn create_milestone(
     fs::write(&path, render_doc(&doc))?;
     Ok((full_id, path))
 }
+
+/// A bare `new` splits by audience: an agent gets a draft to write in place and
+/// commit itself, while a human has no such flow, so their rune is recorded.
+fn should_commit_new(commit: bool, no_commit: bool, has_content: bool, env: EnvLookup) -> bool {
+    if no_commit {
+        return false;
+    }
+    commit || has_content || detect_agent(env).is_none()
+}
+
 fn run_new(args: NewArgs) -> Result<()> {
     let NewArgs {
         title,
@@ -1879,8 +1889,8 @@ fn run_new(args: NewArgs) -> Result<()> {
         let _ = fs::remove_file(&tmp_path);
     }
     let final_path = reconcile_filename(&doc_path, &identifier)?;
-    // Content supplied up front (-e/-f/-m) is finished work; a bare `new` leaves a draft.
-    let should_commit = !no_commit && (commit || edit || file.is_some() || message.is_some());
+    let has_content = edit || file.is_some() || message.is_some();
+    let should_commit = should_commit_new(commit, no_commit, has_content, &system_env);
     if should_commit {
         let default_msg = build_commit_message("Add", &identifier, std::slice::from_ref(&status));
         maybe_commit(
@@ -5374,6 +5384,12 @@ fn write_quickstart(out: &mut impl io::Write, mode: QuickstartMode) -> Result<()
             "  Always pass `--json`: it answers with {{id, path, committed}}."
         )?;
         writeln!(out)?;
+        writeln!(
+            out,
+            "  A bare `runes new` leaves an uncommitted draft when an agent is detected;"
+        )?;
+        writeln!(out, "  --commit, -e, -f or -m record it immediately.")?;
+        writeln!(out)?;
         writeln!(out, "  1) Create a draft, fill it in, commit it:")?;
         writeln!(out)?;
         writeln!(out, "       runes new \"Fix login bug\" --kind bug --json")?;
@@ -5413,11 +5429,15 @@ fn write_quickstart(out: &mut impl io::Write, mode: QuickstartMode) -> Result<()
     } else {
         writeln!(
             out,
-            "  runes new \"Add auth\"                       # create an empty rune"
+            "  runes new \"Add auth\"                       # create and record an empty rune"
         )?;
         writeln!(
             out,
             "  runes new \"Add auth\" -e                    # draft it in $EDITOR"
+        )?;
+        writeln!(
+            out,
+            "  runes new \"Add auth\" --no-commit           # leave it for `runes commit <id>`"
         )?;
         writeln!(out, "  runes new \"Fix login bug\" --kind bug")?;
         writeln!(out, "  runes new \"v2.0 release\" --kind milestone")?;

@@ -70,6 +70,10 @@ variant and an agent variant (`--human` / `--agent`; an agent in the environment
 selects the agent one) — `runes init` installs the agent variant as a skill for
 Claude Code and friends.
 
+Detection also decides what `runes new` does with no `--commit`/`--no-commit`:
+an agent gets an uncommitted draft to fill in and `runes commit <id>` itself,
+while for a human the new rune is recorded right away.
+
 Scripts can skip the text output entirely — `runes new "..." --json` prints
 `{"id": ..., "path": <absolute>, "committed": <bool>}`.
 
@@ -84,14 +88,14 @@ runes list
 ### Creating and editing runes
 
 ```bash
-# Create an issue
+# Create an issue (recorded right away; --no-commit leaves it as a draft)
 runes new "Fix the login bug"
 
 # Create and open in $EDITOR
 runes new "Design the API" -e
 
 # Create with metadata
-runes new "Refactor auth" --status wip --label backend --assignee self --commit
+runes new "Refactor auth" --status wip --label backend --assignee self
 
 # Create a milestone
 runes new "v1 Release" --kind milestone
